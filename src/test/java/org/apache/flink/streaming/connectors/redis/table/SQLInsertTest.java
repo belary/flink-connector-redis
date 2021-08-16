@@ -30,6 +30,7 @@ public class SQLInsertTest {
     public static final String CLUSTERNODES = "10.26.33.71:6667,10.26.33.102:6667,10.26.8:6667";
 //    public static final String CLUSTERNODES = "10.11.80.147:7000,10.11.80.147:7001,10.11.80.147:8000,10.11.80.147:8001,10.11.80.147:9000,10.11.80.147:9001";
 
+
     @Test
     public void testNoPrimaryKeyInsertSQL() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -52,6 +53,9 @@ public class SQLInsertTest {
     }
 
 
+    /**
+     * 这个实现了SET(KEY, VALUE)
+     */
     @Test
     public void testSingleInsertHashClusterSQL() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -77,6 +81,9 @@ public class SQLInsertTest {
     }
 
 
+    /**
+     * 这个实现了HSET(KEY, FIELD, VALUE)
+     */
     @Test
     public void testSentinelClusterSql() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
