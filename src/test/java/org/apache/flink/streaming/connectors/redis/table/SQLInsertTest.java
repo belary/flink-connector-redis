@@ -18,14 +18,14 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.apache.flink.streaming.connectors.redis.descriptor.RedisValidator.*;
-import static org.apache.flink.streaming.connectors.redis.descriptor.RedisValidator.REDIS_CLUSTER;
 
 /**
  * Created by jeff.zou on 2020/9/10.
  */
 public class SQLInsertTest {
 
-    public static final String CLUSTERNODES = "10.11.80.147:7000,10.11.80.147:7001,10.11.80.147:8000,10.11.80.147:8001,10.11.80.147:9000,10.11.80.147:9001";
+    public static final String CLUSTERNODES = "10.26.33.71:6667,10.26.33.8:6667,10.26.33.102:6667";
+//    public static final String CLUSTERNODES = "10.11.80.147:7000,10.11.80.147:7001,10.11.80.147:8000,10.11.80.147:8001,10.11.80.147:9000,10.11.80.147:9001";
 
     @Test
     public void testNoPrimaryKeyInsertSQL() throws Exception {
@@ -35,7 +35,7 @@ public class SQLInsertTest {
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, environmentSettings);
 
         String ddl = "create table sink_redis(username VARCHAR, passport VARCHAR) with ( 'connector'='redis', " +
-                "'host'='10.11.80.147','port'='7001', 'redis-mode'='single','password'='******','key-column'='username','value-column'='passport','" +
+                "'host'='10.26.33.71','port'='6667', 'redis-mode'='single','key-column'='username','value-column'='passport','" +
                 REDIS_COMMAND + "'='" + RedisCommand.SET + "')" ;
 
         tEnv.executeSql(ddl);
@@ -57,7 +57,7 @@ public class SQLInsertTest {
 
         String ddl = "create table sink_redis(username VARCHAR, level varchar, age varchar) with ( 'connector'='redis', " +
                 "'cluster-nodes'='" + CLUSTERNODES + "','redis-mode'='cluster','field-column'='level', 'key-column'='username', 'put-if-absent'='true'," +
-                " 'value-column'='age', 'password'='******','" +
+                " 'value-column'='age','" +
                 REDIS_COMMAND + "'='" + RedisCommand.HSET + "', 'maxIdle'='2', 'minIdle'='1'  )" ;
 
         tEnv.executeSql(ddl);
@@ -70,4 +70,32 @@ public class SQLInsertTest {
     }
 
 
+    @Test
+    public void testSentinelClusterSql() throws Exception {
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        EnvironmentSettings environmentSettings = EnvironmentSettings.newInstance()
+                .useBlinkPlanner().inStreamingMode().build();
+        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env ,environmentSettings);
+
+        String ddl =
+                "CREATE TABLE test_redis_sentinel_sink1 ( \n" +
+                        "    username VARCHAR, \n" +
+                        "    level VARCHAR, \n" +
+                        "    age VARCHAR" +
+                        ") WITH (\n" +
+                        "       'connector'         = 'redis', \n" +
+                        "       'redis-mode'        = 'sentinel', \n" +
+                        "       'sentinels.info'    = '10.26.35.141:6508,10.26.35.73:6508,10.26.35.140:6506',\n" +
+                        "       'master.name'       = 'sentinel-10.26.35.73-6507' \n" +
+                        "    )";
+        tEnv.executeSql(ddl);
+
+        String sql = " insert into test_redis_sentinel_sink1 select * from (values ('test_fc', '4', '16'))";
+        TableResult tableResult = tEnv.executeSql(sql);
+        tableResult.getJobClient().get()
+                .getJobExecutionResult()
+                .get();
+        System.out.println(sql);
+
+    }
 }
