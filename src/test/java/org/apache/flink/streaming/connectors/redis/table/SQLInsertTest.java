@@ -9,8 +9,10 @@ import org.apache.flink.streaming.connectors.redis.common.hanlder.RedisMapperHan
 import org.apache.flink.streaming.connectors.redis.common.mapper.RedisCommand;
 import org.apache.flink.streaming.connectors.redis.common.mapper.RedisMapper;
 import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.types.Row;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -24,7 +26,8 @@ import static org.apache.flink.streaming.connectors.redis.descriptor.RedisValida
  */
 public class SQLInsertTest {
 
-    public static final String CLUSTERNODES = "10.26.33.71:6667,10.26.33.8:6667,10.26.33.102:6667";
+    public static final String SENTINEL_NODES = "10.26.35.141:6508,10.26.35.73:6508,10.26.35.140:6506";
+    public static final String CLUSTERNODES = "10.26.33.71:6667,10.26.33.102:6667,10.26.8:6667";
 //    public static final String CLUSTERNODES = "10.11.80.147:7000,10.11.80.147:7001,10.11.80.147:8000,10.11.80.147:8001,10.11.80.147:9000,10.11.80.147:9001";
 
     @Test
@@ -35,16 +38,17 @@ public class SQLInsertTest {
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env, environmentSettings);
 
         String ddl = "create table sink_redis(username VARCHAR, passport VARCHAR) with ( 'connector'='redis', " +
-                "'host'='10.26.33.71','port'='6667', 'redis-mode'='single','key-column'='username','value-column'='passport','" +
+                "'host'='10.26.35.73','port'='6507', 'redis-mode'='single','key-column'='username','value-column'='passport','" +
                 REDIS_COMMAND + "'='" + RedisCommand.SET + "')" ;
 
         tEnv.executeSql(ddl);
-        String sql = " insert into sink_redis select * from (values ('test', 'test11'))";
+        String sql = " insert into sink_redis select * from (values ('mytest', 'test11'))";
         TableResult tableResult = tEnv.executeSql(sql);
         tableResult.getJobClient().get()
                 .getJobExecutionResult()
                 .get();
         System.out.println(sql);
+        System.out.println(ddl);
     }
 
 
@@ -58,7 +62,7 @@ public class SQLInsertTest {
         String ddl = "create table sink_redis(username VARCHAR, level varchar, age varchar) with ( 'connector'='redis', " +
                 "'cluster-nodes'='" + CLUSTERNODES + "','redis-mode'='cluster','field-column'='level', 'key-column'='username', 'put-if-absent'='true'," +
                 " 'value-column'='age','" +
-                REDIS_COMMAND + "'='" + RedisCommand.HSET + "', 'maxIdle'='2', 'minIdle'='1'  )" ;
+                REDIS_COMMAND + "'='" + RedisCommand.HSET + "', 'maxIdle'='20', 'minIdle'='10'  )" ;
 
         tEnv.executeSql(ddl);
         String sql = " insert into sink_redis select * from (values ('test_hash', '3', '15'))";
@@ -67,6 +71,9 @@ public class SQLInsertTest {
                 .getJobExecutionResult()
                 .get();
         System.out.println(sql);
+
+
+
     }
 
 
@@ -86,11 +93,15 @@ public class SQLInsertTest {
                         "       'connector'         = 'redis', \n" +
                         "       'redis-mode'        = 'sentinel', \n" +
                         "       'sentinels.info'    = '10.26.35.141:6508,10.26.35.73:6508,10.26.35.140:6506',\n" +
-                        "       'master.name'       = 'sentinel-10.26.35.73-6507' \n" +
+                        "       'master.name'       = 'sentinel-10.26.35.73-6507', \n" +
+                        "       'key-column'        = 'username',\n" +
+                        "       'field-column'      = 'level',\n" +
+                        "       'value-column'      = 'age',\n" +
+                        "       'command'           = 'HSET'\n" +
                         "    )";
         tEnv.executeSql(ddl);
 
-        String sql = " insert into test_redis_sentinel_sink1 select * from (values ('test_fc', '4', '16'))";
+        String sql = " insert into test_redis_sentinel_sink1 select * from (values ('test_fc:level:age', '3', '19'))";
         TableResult tableResult = tEnv.executeSql(sql);
         tableResult.getJobClient().get()
                 .getJobExecutionResult()
